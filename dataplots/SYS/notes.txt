@@ -1,0 +1,23 @@
+
+LDA SYSTEMATICS
+===============
+
+
+
+01 - Lattice depth 
+==================
+
+
+This keeps the green compensation constant, so as the depth is varied, not only
+the lattice depth is changing, but the density distribution changes 
+considerably due to the different compensation.  Since compensation is a very
+critical variable, then a small change in the lattice depth can cause a large
+change in Spi. 
+
+It will make more sense to vary  ir and gr together, both in power and in
+waists.  
+
+
+
+
+

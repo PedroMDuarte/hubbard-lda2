@@ -57,7 +57,12 @@ def spi_bulk( r111, n111, mu111, T, t111, U111, **kwargs ):
 
     spi = np.ones_like( mu111 ) 
     entropy = np.zeros_like( mu111 ) 
-    density = np.zeros_like( mu111 )  
+    density = np.zeros_like( mu111 ) 
+
+    do_kappa =  kwargs.get('do_kappa', False)
+    if do_kappa:
+        compr = np.zeros_like(mu111) 
+   
 
     posr111 = np.abs(r111) 
 
@@ -92,6 +97,19 @@ def spi_bulk( r111, n111, mu111, T, t111, U111, **kwargs ):
                 continue
             spi[ i ] =  result
 
+            # Find the kappa
+            if do_kappa:
+                result = qmc.find_closest_qmc( U=Uval, T=Tval, mu=mu, \
+                             title_text = title_text, radius=r111[i], QTY='kappa',
+                              error_nan=True)
+                if result is None:
+                    print "Had problems finding kappa for " +  \
+                      " U={:02d}, T={:0.2f}".format(int(Uval), Tval)
+                    continue
+                compr[ i ] =  result
+
+
+
             # Find the density 
             result = qmc.find_closest_qmc( U=Uval, T=Tval, mu=mu, \
                                   title_text = title_text, \
@@ -121,10 +139,12 @@ def spi_bulk( r111, n111, mu111, T, t111, U111, **kwargs ):
 
             # Change True/False to use entropy extrapolation
             elif r111[i] >=0. and result is np.nan and True:
-                print 
-                print 'r={:.1f}, U={:0.2f}, T={:0.3f}, mu={:0.3f}'.\
-                      format(r111[i],Uval, Tval, mu),
-                print '  ==> s = nan'
+                printv = False 
+                if printv:
+                    print 
+                    print 'r={:.1f}, U={:0.2f}, T={:0.3f}, mu={:0.3f}'.\
+                          format(r111[i],Uval, Tval, mu),
+                    print '  ==> s = nan'
                 Tabove = Tval + np.linspace(0.02, 0.2, 6)
                 sabove = [] 
                 for Tab in Tabove:
@@ -136,7 +156,8 @@ def spi_bulk( r111, n111, mu111, T, t111, U111, **kwargs ):
                     except:
                         sabove.append(np.nan) 
                 extrapdat =  np.column_stack(( Tabove, sabove))
-                print extrapdat 
+                if printv:
+                    print extrapdat 
                 valid =  ~np.isnan( extrapdat[:,1] )  
                 if  np.sum( valid ) > 2:
                     x = extrapdat[:,0][ valid ] 
@@ -144,8 +165,13 @@ def spi_bulk( r111, n111, mu111, T, t111, U111, **kwargs ):
                     z = np.polyfit( x,y, 1) 
                     p = np.poly1d(z) 
                     extrap = max( float(p(Tval)), 0.0 )    
-                    print "Extrapolated = {:0.2f}".format( extrap )  
+                    if printv:
+                        print "Extrapolated = {:0.2f}".format( extrap )  
                     result =  extrap 
+                    if not printv:
+                        print 'r={:.1f}, U={:0.2f}, T={:0.3f}, mu={:0.3f}'.\
+                              format(r111[i],Uval, Tval, mu),
+                        print '  ==> s = {:0.2f}'.format(result)
                     if False:
                         fig = plt.figure( figsize=(3.5,3.5))
                         gs = matplotlib.gridspec.GridSpec( 1,1 ,\
@@ -187,8 +213,12 @@ def spi_bulk( r111, n111, mu111, T, t111, U111, **kwargs ):
     overall_entropy = integrate_sphere( r111, entropy ) / number
 
     lda_number = integrate_sphere( r111, density ) 
-
-    return spibulk, spi, overall_entropy, entropy, lda_number, density
+    
+    if do_kappa:
+        return spibulk, spi, overall_entropy, entropy, lda_number, density,\
+                compr
+    else:
+        return spibulk, spi, overall_entropy, entropy, lda_number, density
 
 
 

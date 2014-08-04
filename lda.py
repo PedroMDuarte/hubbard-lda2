@@ -88,8 +88,8 @@ from scipy.interpolate import interp1d
 
 
 # Load up the HTSE solutions 
-from htse import htse_dens, htse_doub, htse_entr
-from nlce import nlce_dens, nlce_entr, nlce_spi
+from htse import htse_dens, htse_doub, htse_entr, htse_cmpr
+from nlce import nlce_dens, nlce_entr, nlce_spi, nlce_cmpr
 
 import qmc, qmc_spi 
 
@@ -129,6 +129,13 @@ def get_doub( T, t, mu, U, select='htse', ignoreLowT=False, verbose=True):
     else:
         raise "doublons not defined" 
 
+def get_cmpr( T, t, mu, U, select='htse', ignoreLowT=False, verbose=True):
+    """ This function packages all three methods for obtaining
+    the thermodynamic quantities: htse, nlce, qmc"""
+    if select == 'htse':
+        return htse_cmpr( T, t, mu, U, ignoreLowT=ignoreLowT, verbose=verbose)
+    elif select == 'nlce':
+        return nlce_cmpr( T, t, mu, U, ignoreLowT=ignoreLowT, verbose=verbose)
     
 
 
@@ -609,16 +616,36 @@ class lda:
         # Get the bulk Spi and the Spi profile
         # ALSO  
         # Get the overall S/N and the s profiles,  both s per lattice site
-        # and s per particle  
+        # and s per particle 
         spibulk, spi, overall_entropy, entropy, lda_number, density =  \
              qmc_spi.spi_bulk( r111, n111, localMu_t, Tspi, \
              self.tunneling_111, self.onsite_111, **kwargs )
 
+        do_k111 = kwargs.get('do_k111', False)
+        if do_k111:
+            # Get the compressibility
+            k111 = get_cmpr( self.T, self.tunneling_111, localMu, \
+                          self.onsite_111, select=self.select,\
+                          ignoreLowT=self.ignoreLowT, \
+                          verbose=self.verbose)
+            
+            k111htse_list = [] 
+            for Thtse in [ 1.8, 2.3, 2.8]:
+                k111htse = get_cmpr( Thtse*t0, self.tunneling_111, localMu, \
+                          self.onsite_111, select='htse',\
+                          ignoreLowT=self.ignoreLowT, \
+                          verbose=self.verbose)
+                k111htse_list.append( [Thtse, k111htse] )
+        else:
+            k111 = None
+            k111htse_list = []  
+        
 
         U111 = self.onsite_111 / self.tunneling_111
 
         return spibulk, spi, r111, n111, U111, self.tunneling_111, \
-               overall_entropy, entropy, lda_number, density
+               overall_entropy, entropy, lda_number, density, k111, \
+               k111htse_list
 
     def getSpiFineGrid( self, **kwargs):
         direc111 = (np.arctan(np.sqrt(2)), np.pi/4)
@@ -663,8 +690,10 @@ class lda:
         # Get the bulk Spi and the Spi profile
         # ALSO  
         # Get the overall S/N and the s profiles,  both s per lattice site
-        # and s per particle  
-        spibulk, spi, overall_entropy, entropy, lda_number, density =  \
+        # and s per particle 
+        kwargs['do_kappa']=True 
+        spibulk, spi, overall_entropy, entropy, \
+            lda_number, density, compr =  \
              qmc_spi.spi_bulk( r111_, density_, localMu_t_, Tspi, \
              tunneling_111_, onsite_111_, **kwargs )
 
@@ -673,7 +702,7 @@ class lda:
 
         #return spibulk, spi, r111, n111, U111, self.tunneling_111, \
         #       overall_entropy, entropy, lda_number, density
-        return r111_, spi, density_
+        return r111_, spi, density_, compr,  localMu_t_ * tunneling_111_
 
 
     def getNumber( self, gMu, T, **kwargs):
@@ -764,6 +793,7 @@ class lda:
                 print msg
                 print posdens[0]
                 print posdens[-1]
+                print posdens
                 print self.pot.g0
                 #print "etaF = ", self.EtaEvap
                 #print "etaFstar = ", self.etaF_star

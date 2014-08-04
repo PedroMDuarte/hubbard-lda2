@@ -14,15 +14,16 @@ def Spi_vs_N( aS=200., Spi_inhomog=False, Tspi=0.9, \
               bestForce = -1 ,
               spiextents = 25., 
               entextents = 25., 
-              finegrid = False, 
+              finegrid = False,
+              **kwargs 
               ):
 
-    s       = 7.
-    g       = 3.666
-    wIR     = 47.
-    wGR     = 47./1.175
-    T       = 0.035
-    extents = 30.
+    s       = kwargs.pop('params_s', 7.) 
+    g       = kwargs.pop('params_g', 3.666)
+    wIR     = kwargs.pop('params_wIR', 47.) 
+    wGR     = kwargs.pop('params_wGR', 47./1.175) 
+    T       = kwargs.pop('params_T', 0.035) 
+    extents = kwargs.pop('params_extents', 30.)
     direc   = '111'
     mu0     = 'halfMott'
 
@@ -43,17 +44,18 @@ def Spi_vs_N( aS=200., Spi_inhomog=False, Tspi=0.9, \
                        ignoreMuThreshold=True)
 
         spibulk, spi, r111, n111, U111, t111, entrbulk, entr111,\
-        lda_num, density111  = \
+        lda_num, density111, k111, k111htse_list = \
             lda0.getBulkSpi(Tspi=Tspi, inhomog=Spi_inhomog, \
-               spiextents=spiextents, entextents=entextents)
+               spiextents=spiextents, entextents=entextents, do_k111=True)
     
         if finegrid: 
-            r111_fine, spi111_fine, n111_fine = \
+            r111_fine, spi111_fine, n111_fine, k111_fine, mu111_Er = \
                 lda0.getSpiFineGrid( Tspi=Tspi, numpoints=320,\
                     inhomog=Spi_inhomog, spiextents=spiextents, \
                     entextents=entextents )
         else:
-            r111_fine, spi111_fine, n111_fine = None, None, None
+            r111_fine, spi111_fine, n111_fine, k111_fine, mu111_Er = \
+                 None, None, None, None, None
 
 
         spis.append( {'SpiBulk':spibulk,\
@@ -64,6 +66,8 @@ def Spi_vs_N( aS=200., Spi_inhomog=False, Tspi=0.9, \
                       't111':t111,\
                       'entrbulk':entrbulk,\
                       'entr111':entr111,\
+                      'k111':k111,\
+                      'k111htse_list':k111htse_list,\
                       'Number':lda0.Number,\
                       'ldanum':lda_num,\
                       # dens111 is the one obtained from QMC
@@ -75,6 +79,8 @@ def Spi_vs_N( aS=200., Spi_inhomog=False, Tspi=0.9, \
                       'r111_fine':r111_fine,\
                       'spi111_fine':spi111_fine,\
                       'n111_fine':n111_fine,\
+                      'k111_fine':k111_fine,\
+                      'mu111_Er':mu111_Er,\
                       } ) 
 
         # Figure to check inhomogeneity
@@ -84,15 +90,19 @@ def Spi_vs_N( aS=200., Spi_inhomog=False, Tspi=0.9, \
         figfname = savedir + 'Inhomog/{:0.3f}gr_{:03d}_{}_T{:0.4f}Er.png'.\
                    format(g,tag,select,T)
 
+        figfname = kwargs.pop( 'params_figfname', figfname) 
+
         fig111.savefig(figfname, dpi=300)
 
-    plot_spis( spis, inhomog=Spi_inhomog, bestForce=bestForce)
+    plot_spis( spis, inhomog=Spi_inhomog, bestForce=bestForce, \
+          # kwargs 
+          **kwargs)
     
     return spis[bestForce] 
 
 
 
-def plot_spis( spis,  inhomog=False, bestForce = -1):
+def plot_spis( spis,  inhomog=False, bestForce = -1, **kwargs):
     """ This function makes a nice plot of the results of 
     the studies of Spi_vs_n""" 
 
@@ -326,9 +336,12 @@ def plot_spis( spis,  inhomog=False, bestForce = -1):
     if inhomog:
         inhomog_tag = 'inhomog'
     else:
-        inhomog_tag = '' 
-    fig.savefig( savedir + 'Tn{:0.2f}_U{:04.1f}_T{:0.2f}'.\
-                 format(T0dens,U0,T0) + inhomog_tag +'.png', dpi=300)
+        inhomog_tag = ''  
+  
+    figfname2 =  savedir + 'Tn{:0.2f}_U{:04.1f}_T{:0.2f}'.\
+                 format(T0dens,U0,T0)  + inhomog_tag + '.png'
+    figfname2 = kwargs.pop( 'figfname2', figfname2) 
+    fig.savefig( figfname2, dpi=300)
 
 
 import os

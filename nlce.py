@@ -64,7 +64,7 @@ def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
     for Uval in [Ua,Ub]:
         for Tval in Tpts:
             fname =  datadir + \
-                'NLCE8_Final/U{:02d}/T{:0.2f}.dat'.format(int(Uval),Tval)
+                'NLCE8_FinalK/U{:02d}/T{:0.2f}.dat'.format(int(Uval),Tval)
             datfiles.append([ fname, Uval, Tval ])
             
     if qty == 'dens':
@@ -73,6 +73,8 @@ def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
         COL = 2 
     elif qty == 'spi':
         COL = 3 
+    elif qty == 'kappa':
+        COL = 4 
     else:
         raise "Qty not defined:", qty
             
@@ -192,7 +194,7 @@ def nlce_dens( T, t, mu, U, ignoreLowT=False, verbose=True):
     for i in range( len(mu_)):
         result[i] = find_closest_nlce( U=U_[i], T=T_[i], mu=mu_[i], \
                      qty='dens',  qtyinterp=QTYINTERP  ) 
-    return result     
+    return result    
  
 def nlce_entr( T, t, mu, U, ignoreLowT=False, verbose=True):
     U_ = U/t 
@@ -214,5 +216,16 @@ def nlce_spi( T, t, mu, U, ignoreLowT=False, verbose=True):
     for i in range( len(mu_)):
         result[i] = find_closest_nlce( U=U_[i], T=T_[i], mu=mu_[i], \
                      qty='spi', qtyinterp=QTYINTERP ) 
+    return result     
+ 
+def nlce_cmpr( T, t, mu, U, ignoreLowT=False, verbose=True):
+    U_ = U/t 
+    T_ = T/t 
+    mu_ = mu/t   
+
+    result = np.empty_like(mu) 
+    for i in range( len(mu_)):
+        result[i] = find_closest_nlce( U=U_[i], T=T_[i], mu=mu_[i], \
+                     qty='kappa',  qtyinterp=QTYINTERP  ) 
     return result     
 

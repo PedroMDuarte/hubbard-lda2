@@ -75,7 +75,8 @@ def check_valid( T, t, mu, U, ignoreLowT, verbose):
 
     nerror = np.sum(  Tt_ < minTt )
     if nerror > 0 :
-        msg = "HTSE ERROR: T/t < %.2f =>  min(T/t) = %.2f"% (minTt, Tt_.min())
+        msg = "HTSE ERROR: T/t < %.2f =>  min(T/t) = %.2f, max(T/t) = %.2f"% \
+                (minTt, Tt_.min(), Tt_.max())
         msg = msg + '\nmu0 = %.2f'%mu.max()
         
         if verbose:
@@ -170,9 +171,70 @@ def htse_entr( T, t, mu, U, ignoreLowT=False, verbose=True ):
     #print term4
     return  term0 + term1 + term2 + term3 + term4
 
+#def htse_cmpr( T, t, mu, U, ignoreLowT=False, verbose=True ):
+#    dmu = 0.001
+#    n1 = htse_dens( T, t, mu+dmu, U, ignoreLowT=ignoreLowT, verbose=verbose)
+#    n0 = htse_dens( T, t, mu-dmu, U, ignoreLowT=ignoreLowT, verbose=verbose)
+#
+#    dn =  n1**(2./3.) - n0**(2./3.) 
+#    return dn/(2.*dmu)
+
+def htse_cmpr( T, t, mu, U, ignoreLowT=False, verbose=True ):
+    check_valid( T, t, mu, U, ignoreLowT,verbose)
+ 
+    term0 =  2.*np.exp(mu/T) + 1. + np.exp(-U/T)*np.exp(2.*mu/T)
+    
+    term1 = (t/T) * (2*np.exp(mu/T) + 4.*np.exp(-U/T)*np.exp(2.*mu/T)) / term0 
+    
+    term2 = (t/T) * (-2.*np.exp(mu/T) - 2.*np.exp(-U/T)*np.exp(2.*mu/T) ) * \
+                    ( 2.*np.exp(mu/T) + 2.*np.exp(-U/T)*np.exp(2.*mu/T) ) / \
+                     (term0**2.) 
+    
+    term3 = ((t/T)**3.) * 6.0 * \
+            (-4.*np.exp(mu/T) - 8.*np.exp(-U/T)*np.exp(2.*mu/T) ) * \
+            ( 2.*(T/U)*(1. - np.exp(-U/T))*np.exp(2.*mu/T) + np.exp(mu/T) + \
+                np.exp(-U/T)*np.exp(3.*mu/T)) / (term0**3.)
+    
+    term4 = ((t/T)**3.) *  6.0 * \
+            (-6.*np.exp(mu/T) - 6.*np.exp(-U/T)*np.exp(2.*mu/T)) * \
+            (-4.*np.exp(mu/T) - 4.*np.exp(-U/T)*np.exp(2.*mu/T)) * \
+            ( 2.*(T/U)*(1 - np.exp(-U/T))*np.exp(2.*mu/T) + \
+                 np.exp(mu/T) + np.exp(-U/T)*np.exp(3.*mu/T)) / ( term0**4.)
+    
+    term5 = ((t/T)**3.) * 12.0 * \
+            (-4.*np.exp(mu/T) - 4.*np.exp(-U/T)*np.exp(2.*mu/T)) * \
+            ( 4.*(T/U)*(1. - np.exp(-U/T))*np.exp(2.*mu/T) + np.exp(mu/T) + \
+                  3.*np.exp(-U/T)*np.exp(3.*mu/T)) /  ( term0**3.)
+    
+    term6 = ((t/T)**3.) * 6.0 * \
+            ( 8.*(T/U)*(1. - np.exp(-U/T))*np.exp(2.*mu/T) + \
+                np.exp(mu/T) + 9.*np.exp(-U/T)*np.exp(3.*mu/T) ) / ( term0**2.) 
+    
+    dn_dmu = term1 + term2 + term3 + term4 + term5 + term6
+
+    # Density : 
+ 
+    z0  = 2.*np.exp(mu/T)  + np.exp(-U/T + 2.*mu/T)  + 1. 
+    
+    n_term1 = ( 2.*np.exp(mu/T) + 2.*np.exp(-U/T + 2.*mu/T) ) / z0 
+
+    n_term2 = 6.*((t/T)**2.)*(-4.*np.exp(mu/T) - 4.*np.exp(-U/T + 2.*mu/T) ) * \
+                           ( 2.*T*(1-np.exp(-U/t))*np.exp(2.*mu/T) / U \
+                             + np.exp( mu/T ) + np.exp( -U/T + 3.*mu/T)) \
+                      / z0**3.
+
+    n_term3 = 6.*((t/T)**2.)*(4.*T*(1-np.exp(-U/T))*np.exp(2.*mu/T)/U \
+                              + np.exp(mu/T) + 3.*np.exp( -U/T + 3.*mu/T) ) \
+                      / z0**2.
+        
+    n = n_term1 + n_term2 + n_term3
+
+    return (2./3.) /  n**(1./3.)   * dn_dmu
+
+
+   
 
 if __name__ == "__main__":
     print htse_dens( 2.4, 1., 10., 20.)
     print htse_doub( 2.4, 1., 10., 20.)
     print htse_entr( 2.4, 1., 10., 20.)
-

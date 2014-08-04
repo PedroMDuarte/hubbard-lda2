@@ -46,10 +46,10 @@ DETAILED PROCEDURE TO PRODUCE LDA PLOTS IN AFM PAPER
 
     -  U04, T=0.40  has some garbage rows at the end that need to be deleted
 
-    -  U07, T=0.67  has a lower case t instead of T for the temprature in the
+    -  U07, T=0.67  has a lower case t instead of T for the temperature in the
                     file name 
 
-    -  U09  All data sets are labeled with L instead of T.   The relationship
+    -  U09  All data sets are labeled with L instead of T.  The relationship
             is  T/t = 20/L,  so one has to manually relabel them:
 
             $ mv saf6l20u9dt0.05.dat saf6u9T1.00dt0.05.dat  (..and so on) 
@@ -209,7 +209,7 @@ END COMMENT
     
 12. Before processing the QMC_Extra data we will process the NLCE data set. 
     A lot of noise filtering had to be performed on the NLCE data.  After 
-    filtering the final results were saved into the directory 'NLCE8_Final/'. 
+    filtering, the final results were saved into the directory 'NLCE8_Final/'. 
     
     Go ahead and copy 'NLCE8_Final/' into the working directory (if it is not
     already there).  

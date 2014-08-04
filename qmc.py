@@ -29,9 +29,11 @@ def get_qty_mu( dat, mu, MUCOL, COL, **kwargs ):
     qtyinterp = 'linear'
     msg = kwargs.get('msg', None)
 
-    ENTRCOL = 2  
-    SPICOL = 3
     DENSCOL = 1  
+    ENTRCOL = 2  
+    SPICOL  = 3
+    CMPRCOL = 4 
+
     if COL == SPICOL:
         default_minus = 1.0 
         default_plus  = 0.0  
@@ -40,7 +42,10 @@ def get_qty_mu( dat, mu, MUCOL, COL, **kwargs ):
         default_plus  = 0.0  
     elif COL == DENSCOL:
         default_minus = 0.0 
-        default_plus  = 2.0  
+        default_plus  = 2.0   
+    elif COL == CMPRCOL:
+        default_minus = 0.0 
+        default_plus  = 0.0
     else:
         raise ValueError("Column not defined: COL = {:d}".format(COL) ) 
   
@@ -143,6 +148,8 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
         datadir = '/home/pmd/sandbox/hubbard-lda2/COMB_Final_Entr/'
     elif QTY == 'density':
         datadir = '/home/pmd/sandbox/hubbard-lda2/COMB_Final_Spi/'
+    elif QTY == 'kappa':
+        datadir = '/home/pmd/sandbox/hubbard-lda2/COMB_Final_Spi/'
     else:
         raise ValueError('Quantity not defined:' + str(QTY) ) 
          
@@ -168,7 +175,7 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
     for u in us:    
     
         # For the Spi and Stheta data
-        if QTY == 'spi' or QTY == 'density':
+        if QTY == 'spi' or QTY == 'density' or QTY == 'kappa':
             fname = datadir + 'U{U:02d}/T*dat'.format(U=int(u))
             fs = sorted(glob.glob(fname))
             Ts = [ float(f.split('T')[1].split('.dat')[0]) for f in fs ]
@@ -243,10 +250,11 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
             #datfiles.append( [ fs[index[1]], u, Ts[index[1]] ] ) 
         
     #print datfiles
-    MUCOL = 0 
+    MUCOL   = 0 
     DENSCOL = 1
     ENTRCOL = 2  
-    SPICOL = 3 
+    SPICOL  = 3 
+    CMPRCOL = 4
   
     if QTY == 'spi':
         COL = SPICOL 
@@ -254,6 +262,8 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
         COL = ENTRCOL 
     elif QTY == 'density':
         COL = DENSCOL 
+    elif QTY == 'kappa':
+        COL = CMPRCOL
        
  
     basedat = []
@@ -275,7 +285,7 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
                 #return 'out-of-bounds' 
             basedat.append( [f[1], f[2], spival] )
         except Exception as e :
-            print "Failed to get data from file = ", f
+            print "Failed to get data from file = ", f  
 
             # toggle plotting, not implemented yet: 
             #if showqtyinterp: 
@@ -315,8 +325,10 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
 
     except Exception as e :
         print "QTY=%s -> Interp Error:"%QTY, msg
+        print basedat
         print e
         error = True 
+        #raise e  
 
     if error == False:
         try:
