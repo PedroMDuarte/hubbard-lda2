@@ -220,6 +220,9 @@ class lda:
             NPOINTS = 320 
         else:
             NPOINTS = 80
+	OVERRIDE_NPOINTS = kwargs.pop('override_npoints', None)
+        if OVERRIDE_NPOINTS is not None:
+            NPOINTS = OVERRIDE_NPOINTS 
 
         direc111 = (np.arctan(np.sqrt(2)), np.pi/4)
         unit = vec3(); th = direc111[0]; ph = direc111[1] 
@@ -539,6 +542,13 @@ class lda:
             print posdens 
             raise
 
+
+    def get_localMu_t( self, gMu):
+        gMuZero = self.Ezero0_111 + gMu
+        localMu = gMuZero - self.Ezero_111
+        localMu_t = localMu / self.tunneling_111
+        return localMu_t
+        
 
     def getDensity( self, gMu, T ):
         """

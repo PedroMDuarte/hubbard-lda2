@@ -23,17 +23,19 @@ import udipole
 import scipy.constants as C 
 
 
-# Load the interpolation data for band structure 
-v0 = np.loadtxt('banddat/interpdat_B1D_v0.dat')
+# Load the interpolation data for band structure
+basedir = '/home/pmd/sandbox/hubbard-lda2/'
+ 
+v0 = np.loadtxt(basedir + 'banddat/interpdat_B1D_v0.dat')
 NBands = 3
 from scipy.interpolate import interp1d
 interp0 = []
 interp1 = []
 for n in range( NBands ):
     interp0.append( interp1d(v0, \
-                             np.loadtxt('banddat/interpdat_B1D_0_%d.dat'%n) ))
+               np.loadtxt(basedir + 'banddat/interpdat_B1D_0_%d.dat'%n) ))
     interp1.append( interp1d(v0, \
-                             np.loadtxt('banddat/interpdat_B1D_1_%d.dat'%n) ))
+               np.loadtxt(basedir + 'banddat/interpdat_B1D_1_%d.dat'%n) ))
     
 
 def bands3dvec( s0, NBand=0 ):
@@ -81,8 +83,8 @@ def bands3dvec( s0, NBand=0 ):
 
 #Here the interpolation data for the on-site interactions is loaded from disk
 from scipy.interpolate import interp1d
-wFInterp = interp1d( np.loadtxt('banddat/interpdat_wF_v0.dat'), \
-                     np.loadtxt('banddat/interpdat_wF_wF.dat'))
+wFInterp = interp1d( np.loadtxt(basedir + 'banddat/interpdat_wF_v0.dat'), \
+                     np.loadtxt(basedir + 'banddat/interpdat_wF_wF.dat'))
 
 # Using the interpolation data calculate a function that will get the on-site
 # interactions in a vectorized way. 
