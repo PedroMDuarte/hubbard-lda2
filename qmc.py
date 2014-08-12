@@ -20,9 +20,13 @@ from scipy.spatial import Delaunay
 from scipy.interpolate import CloughTocher2DInterpolator, LinearNDInterpolator
 from scipy.interpolate.interpnd import _ndim_coords_from_arrays
 
+import logging
+# create logger 
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler()) 
+logger.disabled = True
 
-
-def get_qty_mu( dat, mu, MUCOL, COL, **kwargs ): 
+def get_qty_mu( dat, mu, MUCOL, COL, **kwargs ):
     # Control the interpolation between availble
     # density points here 
     #~qtyinterp = 'nearest' 
@@ -47,7 +51,12 @@ def get_qty_mu( dat, mu, MUCOL, COL, **kwargs ):
         default_minus = 0.0 
         default_plus  = 0.0
     else:
-        raise ValueError("Column not defined: COL = {:d}".format(COL) ) 
+        raise ValueError("Column not defined: COL = {:d}".format(COL) )
+
+    CAREFUL = kwargs.get('careful', True) 
+    if CAREFUL and (mu < -10. or mu > 60.):
+        CAREFUL = False
+         
   
 
     if qtyinterp == 'nearest': 
@@ -68,8 +77,8 @@ def get_qty_mu( dat, mu, MUCOL, COL, **kwargs ):
                if verbose:
                    print "QTY=", COL,
                    print "===>>> mu={:0.2f} ".format(mu), msg 
-               return 'out-of-bounds'
-
+               if CAREFUL:
+                   return 'out-of-bounds'
                #print "====>>> BE CAREFUL :  Using default density" + \
                #      " n=%.2f"%default_minus  + \
                #      " at mu={:0.2f}  ".format(mu),
@@ -84,14 +93,14 @@ def get_qty_mu( dat, mu, MUCOL, COL, **kwargs ):
                if verbose:
                    print "QTY=", COL,
                    print "====>>> mu={:0.2f} ".format(mu), msg 
-               return 'out-of-bounds'
+               if CAREFUL:
+                   return 'out-of-bounds'
                #print "====>>> BE CAREFUL :  Using default density" + \
                #      " n=%.2f"%default_plus  + \
                #      " at mu={:0.2f}  ".format(mu),
                #if msg is not None:
                #    print msg 
                #raise ValueError('density error')
-               return 'out-of-bounds'
 
         else:
             # since the mu's are ordered we can do:
@@ -265,9 +274,12 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
     elif QTY == 'kappa':
         COL = CMPRCOL
        
+    msg0 = 'U={:0.2f}, T={:0.2f}'.format(U,T) 
  
+    logger.debug("number of nearby points  = " +  str(len(datfiles))) 
     basedat = []
-    for f in datfiles:
+    basedaterr = []
+    for mm, f in enumerate(datfiles):
         # f[0] is the datafile name
         # f[1] is U
         # f[2] is T 
@@ -280,29 +292,52 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
         try:
             dat = np.loadtxt(f[0])
             spival = get_qty_mu( dat, mu, MUCOL, COL, msg=msg )
+
+            # Toggle the false here to plot all of the out of bounds
             if spival == 'out-of-bounds':
+                #spival_symmetry = 
+                logger.warning('qty is out of bounds')
+                basedaterr.append( [f[1], f[2], np.nan] )
+
+                if False:
+                    fig = plt.figure( figsize=(3.5,3.5))
+                    gs = matplotlib.gridspec.GridSpec( 1,1 ,\
+                            left=0.15, right=0.96, bottom=0.12, top=0.88)
+                    ax = fig.add_subplot( gs[0] )
+                    ax.grid(alpha=0.5) 
+                    ax.plot( dat[:,MUCOL], dat[:,COL], '.-') 
+                    ax.axvline( mu )
+                    ax.text( 0.5, 1.05, msg, ha='center', va='bottom', \
+                        transform=ax.transAxes, fontsize=6.) 
+                    if matplotlib.get_backend() == 'agg':
+                        fig.savefig('err_mu_%02d.png'%mm, dpi=200)
+                        plt.close(fig)
+                    else:         
+                        plt.show()
+                        plt.close(fig)
                 continue 
-                #return 'out-of-bounds' 
-            basedat.append( [f[1], f[2], spival] )
+            else: 
+                basedat.append( [f[1], f[2], spival] )
         except Exception as e :
             print "Failed to get data from file = ", f  
 
             # toggle plotting, not implemented yet: 
-            #if showqtyinterp: 
-            fig = plt.figure( figsize=(3.5,3.5))
-            gs = matplotlib.gridspec.GridSpec( 1,1 ,\
-                    left=0.15, right=0.96, bottom=0.12, top=0.88)
-            ax = fig.add_subplot( gs[0] )
-            ax.grid(alpha=0.5) 
-            ax.plot( dat[:,MUCOL], dat[:,COL], '.-') 
-            ax.axvline( mu )
-
-            ax.text( 0.5, 1.05, msg, ha='center', va='bottom', \
-                transform=ax.transAxes) 
-            plt.show()
-    
-           
+            if True:
+                fig = plt.figure( figsize=(3.5,3.5))
+                gs = matplotlib.gridspec.GridSpec( 1,1 ,\
+                        left=0.15, right=0.96, bottom=0.12, top=0.88)
+                ax = fig.add_subplot( gs[0] )
+                ax.grid(alpha=0.5) 
+                ax.plot( dat[:,MUCOL], dat[:,COL], '.-') 
+                ax.axvline( mu )
+                ax.text( 0.5, 1.05, msg, ha='center', va='bottom', \
+                    transform=ax.transAxes) 
+                if matplotlib.get_backend() == 'agg':
+                    fig.savefig('err_mu_%02d.png'%mm, dpi=200)
+                else:         
+                    plt.show()
             raise e
+    logger.debug("number of nearby valid points  = " +  str(len(basedat))) 
  
         
     error = False
@@ -321,13 +356,17 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
             #finterp = CloughTocher2DInterpolator(points, basedat[:,2])
             finterp = LinearNDInterpolator( points, basedat[:,2] )
         else:
-            raise ValueError('not enough finterp points')
+            logerr = 'not enough finterp points' 
+            logger.exception(logerr)
+            raise ValueError( logerr )
+
 
     except Exception as e :
-        print "QTY=%s -> Interp Error:"%QTY, msg
-        print basedat
-        print e
+        
+        logerr =  "QTY=%s -> Interp Error:"%QTY + '\n' +  msg + \
+                  "number of basedat pts = " + str(len(basedat)) 
         error = True 
+        logger.exception(logerr)
         #raise e  
 
     if error == False:
@@ -339,8 +378,8 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
             if kwargs.get('error_nan', False):
                 return np.nan 
             else:
-                print e
                 error = True
+                logger.exception("Invalid QTY result!")
 
     if error == False:
         if result >= 8. and QTY == 'spi' :
@@ -353,16 +392,29 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
                    format( U, T, mu ), 
             print "  ==> Result={:0.2f}".format(float(result))
             error = True
-        
+
+    logger.debug("error status = " + str(error)) 
     if error or kwargs.get('showinterp',False):
+        logger.debug("Inside error if statement...") 
 
         if kwargs.get('error_nan', False):
-            return np.nan 
+            pass
+            #return np.nan 
 
-        print "Interp points:"
-        print basedat
-        
-        tri = Delaunay(points)
+        #print "Interp points:"
+        #print basedat
+        if len(basedat) == 0 and len(basedaterr) > 0 :
+
+            basedaterr =   np.array(basedaterr)
+            Userr = np.unique(basedaterr[:,0] )
+            Tserr = np.unique(basedaterr[:,1] ) 
+            validTriangerr = not ( len(Userr) ==1  or len(Tserr) ==  1 ) 
+
+            points = _ndim_coords_from_arrays(( basedaterr[:,0] , basedaterr[:,1]))
+            tri = Delaunay(points)
+
+        else:
+            tri = Delaunay(points)
         fig = plt.figure( figsize=(3.5,3.5))
         gs = matplotlib.gridspec.GridSpec( 1,1 ,\
                 left=0.15, right=0.96, bottom=0.12, top=0.88)
@@ -384,17 +436,24 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
         ax.set_title( tt + '$U/t={:.2f}$'.format(U) + \
                       ',\ \ ' + '$T/t={:.2f}$'.format(T), \
                 ha='center', va='bottom', fontsize=10)
+
         save_err = kwargs.get('save_err',None) 
         if save_err is not None:
             print "Saving png." 
             fig.savefig( save_err, dpi=300)
-        plt.show()
+        if matplotlib.get_backend() == 'agg':
+            fig.savefig('err.png', dpi=200)
+            print "Saved error to err.png"
+        else:         
+            plt.show()
         if not kwargs.get('single', False):
             raise ValueError("Could not interpolate using QMC data.")
         if ALLPTS:
             if 'savepath' in kwargs.keys():
                 fig.savefig( kwargs.get('savepath',None) , dpi=300) 
-    
+        if error: 
+            raise
+
     return result
 
         

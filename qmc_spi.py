@@ -23,6 +23,11 @@ import qmc
 
 from scipy import integrate
 
+import logging
+# create logger
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler()) 
+
 def integrate_sphere( r, qty):
     q = qty[ ~np.isnan(qty)]
     r = r[ ~np.isnan(qty) ]
@@ -42,16 +47,16 @@ def spi_bulk( r111, n111, mu111, T, t111, U111, **kwargs ):
     # The max U and min t are used 
     U = U111.max()
     t = t111.min() 
-    print "Calculating Spi_Bulk for " + \
-          "U={:0.2f}, T={:0.2f}".format(U/t, T/t)
-    print "Central chemical potential = ", mu111.max()
+    logger.info( "Calculating Spi_Bulk for " + \
+          "U={:0.2f}, T={:0.2f}".format(U/t, T/t) ) 
+    logger.info( "Central chemical potential = " + str(mu111.max()) ) 
 
     inhomog = kwargs.get('inhomog', False)
     spiextents = kwargs.get('spiextents', 100.) 
     entextents = kwargs.get('entextents', 100.)
 
-    print "spiextents = {:0.2f},  entextents = {:0.2f}".\
-           format(spiextents, entextents) 
+    logger.info( "spiextents = {:0.2f},  entextents = {:0.2f}".\
+           format(spiextents, entextents)  ) 
 
     #subset = np.where( np.abs(r111) < spiextents )[0] 
 
@@ -139,12 +144,13 @@ def spi_bulk( r111, n111, mu111, T, t111, U111, **kwargs ):
 
             # Change True/False to use entropy extrapolation
             elif r111[i] >=0. and result is np.nan and True:
-                printv = False 
-                if printv:
-                    print 
-                    print 'r={:.1f}, U={:0.2f}, T={:0.3f}, mu={:0.3f}'.\
-                          format(r111[i],Uval, Tval, mu),
-                    print '  ==> s = nan'
+
+                warn =  'r={:.1f}, U={:0.2f}, T={:0.3f}, mu={:0.3f}'.\
+                      format(r111[i],Uval, Tval, mu) + '  ==> s = nan'
+                logger.warning( warn ) 
+ 
+                printv = False
+
                 Tabove = Tval + np.linspace(0.02, 0.2, 6)
                 sabove = [] 
                 for Tab in Tabove:
@@ -184,7 +190,8 @@ def spi_bulk( r111, n111, mu111, T, t111, U111, **kwargs ):
                         plt.show()
                     
                 else: 
-                    print "All nans"
+                    logger.warning( "Error extrapolating entropy to lower T, "\
+                                     + " all nans" )  
              
                 
             entropy[ i ] =  result 
@@ -197,10 +204,13 @@ def spi_bulk( r111, n111, mu111, T, t111, U111, **kwargs ):
 
             if result is not np.nan and entfail == True:
                 entfail = False
-                print '== First entropy valid radius =='
-                print 'r={:.1f}, U={:0.2f}, T={:0.3f}, mu={:0.3f}'.\
+                msg1 =  'r={:.1f}, U={:0.2f}, T={:0.3f}, mu={:0.3f}'.\
                       format(r111[i],Uval, Tval, mu),
-                print '  ==> s={:0.2f}'.format( float(result ) )
+             
+                msg2 =  '  ==> s={:0.2f}'.format( float(result ) )
+                logger.info(  '== First entropy valid radius ==' ) 
+                logger.info(  msg1 ) 
+                logger.info(  msg2 ) 
 
 
             

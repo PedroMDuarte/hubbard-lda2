@@ -1,3 +1,10 @@
+
+import logging
+# create logger
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
@@ -280,6 +287,7 @@ class lda:
         # globalMu can be given directly or can be specified via the 
         # number of atoms.  If the Natoms is specified we calculate 
         # the required gMu using this function: 
+        muHalfMott = self.onsite_111.max()/2. 
         if 'globalMu' in kwargs.keys(): 
             # globalMu is given in Er, and is measured from the value
             # of Ezero at the center of the potential
@@ -287,28 +295,37 @@ class lda:
             # units of the tunneling
             self.globalMu = kwargs.get('globalMu', 0.15)
             if  self.globalMu == 'halfMott':
-                self.globalMu = self.onsite_111.max()/2.  \
+                self.globalMu = muHalfMott  \
                                 + kwargs.get('halfMottPlus',0.)
         else :
             self.Number = kwargs.get('Natoms', 3e5)
-            fN = lambda x : self.getNumber(x,self.T, verbose=False)- self.Number
-            if self.verbose:
+            fN = lambda x : self.getNumber( muHalfMott + x,self.T, \
+                                     verbose=False)- self.Number
+            if self.verbose :
                 print "Searching for globalMu => N=%.0f, "% self.Number,
+            
 
-            muBrent = kwargs.get('muBrent', (-1, 2.5)) # Maybe the default
+            muBrent = kwargs.get('muBrent', (-0.2, 0.3)) # Maybe the default
                                                       # muBrent range should
                                                       # be U dependent
+            muBrentShift = kwargs.get('muBrentShift', 0. ) 
+            muBrent = ( muBrent[0] + muBrentShift * muHalfMott, \
+                        muBrent[1] + muBrentShift * muHalfMott )
+
             try:
-                self.globalMu, brentResults = \
+                muBrentOpt, brentResults = \
                     optimize.brentq(fN, muBrent[0], muBrent[1], \
-                                xtol=1e-2, rtol=2e4, full_output=True) 
+                                xtol=2e-3, rtol=1e-2, full_output=True)
+                #print "fN(muBrentOpt) = ", fN(muBrentOpt)
+                self.globalMu =  muHalfMott + muBrentOpt  
             except Exception as e:
                 errstr  = 'f(a) and f(b) must have different signs'
                 if errstr in e.message:
-                    print "mu0 = %.2f -->  fN = %.2g" % \
-                              (muBrent[0], fN(muBrent[0]) )
-                    print "mu1 = %.2f -->  fN = %.2g" % \
-                              (muBrent[1], fN(muBrent[1]) )
+                    print "Natoms = {:.4g}".format(self.Number)
+                    print "mu0 = %.2f -->  Nlda = %.2g" % \
+                              (muBrent[0], fN(muBrent[0]) + self.Number )
+                    print "mu1 = %.2f -->  Nlda = %.2g" % \
+                              (muBrent[1], fN(muBrent[1]) + self.Number )
                 raise
  
             if self.verbose:
@@ -613,10 +630,10 @@ class lda:
         t0 = self.tunneling_111.min() 
         
         Tspi = kwargs.get( 'Tspi', self.T / t0  )
-        print "Tspi in units of t0 = ", Tspi 
+        logger.info(  "Tspi in units of t0 = " + str(Tspi) )  
         Tspi = Tspi * t0
-        print "Tspi in units of Er = ", Tspi
-        print "  t0 in units of Er = ", t0 
+        logger.info( "Tspi in units of Er = " + str(Tspi) ) 
+        logger.info( "  t0 in units of Er = " + str( t0 ) ) 
     
 
         gMuZero = self.Ezero0_111 + self.globalMu

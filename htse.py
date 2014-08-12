@@ -51,20 +51,19 @@ def check_valid( T, t, mu, U, ignoreLowT, verbose):
     Tt_ =  Tt + boost
 
     # Make sure all quantities are arrays with the same dimension
-    if type(Tt) is float:
+    if type(Tt) is float or len(np.atleast_1d(Tt))==1 :
         Tt_arr = np.ones_like(Tt_)*Tt
     else: 
         Tt_arr = Tt 
-    if type(mu) is float:
+    if type(mu) is float or len(np.atleast_1d(mu))==1 :
         mu_arr = np.ones_like(Tt_)*mu
     else:
         mu_arr = mu 
-    if type(U) is float:
+    if type(U) is float or len(np.atleast_1d(U))==1 :
         U_arr = np.ones_like(Tt_)*U
     else:
         U_arr = U 
-     
-
+   
     np.savetxt('errlog', np.column_stack(( \
                             Tt_arr, \
                             boost, \
@@ -229,9 +228,60 @@ def htse_cmpr( T, t, mu, U, ignoreLowT=False, verbose=True ):
         
     n = n_term1 + n_term2 + n_term3
 
-    return (2./3.) /  n**(1./3.)   * dn_dmu
+    return (2./3.) /  n**(1./3.)   * dn_dmu  * t
 
 
+def htse_cmpb( T, t, mu, U, ignoreLowT=False, verbose=True ):
+    check_valid( T, t, mu, U, ignoreLowT,verbose)
+ 
+    term0 =  2.*np.exp(mu/T) + 1. + np.exp(-U/T)*np.exp(2.*mu/T)
+    
+    term1 = (t/T) * (2*np.exp(mu/T) + 4.*np.exp(-U/T)*np.exp(2.*mu/T)) / term0 
+    
+    term2 = (t/T) * (-2.*np.exp(mu/T) - 2.*np.exp(-U/T)*np.exp(2.*mu/T) ) * \
+                    ( 2.*np.exp(mu/T) + 2.*np.exp(-U/T)*np.exp(2.*mu/T) ) / \
+                     (term0**2.) 
+    
+    term3 = ((t/T)**3.) * 6.0 * \
+            (-4.*np.exp(mu/T) - 8.*np.exp(-U/T)*np.exp(2.*mu/T) ) * \
+            ( 2.*(T/U)*(1. - np.exp(-U/T))*np.exp(2.*mu/T) + np.exp(mu/T) + \
+                np.exp(-U/T)*np.exp(3.*mu/T)) / (term0**3.)
+    
+    term4 = ((t/T)**3.) *  6.0 * \
+            (-6.*np.exp(mu/T) - 6.*np.exp(-U/T)*np.exp(2.*mu/T)) * \
+            (-4.*np.exp(mu/T) - 4.*np.exp(-U/T)*np.exp(2.*mu/T)) * \
+            ( 2.*(T/U)*(1 - np.exp(-U/T))*np.exp(2.*mu/T) + \
+                 np.exp(mu/T) + np.exp(-U/T)*np.exp(3.*mu/T)) / ( term0**4.)
+    
+    term5 = ((t/T)**3.) * 12.0 * \
+            (-4.*np.exp(mu/T) - 4.*np.exp(-U/T)*np.exp(2.*mu/T)) * \
+            ( 4.*(T/U)*(1. - np.exp(-U/T))*np.exp(2.*mu/T) + np.exp(mu/T) + \
+                  3.*np.exp(-U/T)*np.exp(3.*mu/T)) /  ( term0**3.)
+    
+    term6 = ((t/T)**3.) * 6.0 * \
+            ( 8.*(T/U)*(1. - np.exp(-U/T))*np.exp(2.*mu/T) + \
+                np.exp(mu/T) + 9.*np.exp(-U/T)*np.exp(3.*mu/T) ) / ( term0**2.) 
+    
+    dn_dmu = term1 + term2 + term3 + term4 + term5 + term6
+
+    # Density : 
+ 
+    z0  = 2.*np.exp(mu/T)  + np.exp(-U/T + 2.*mu/T)  + 1. 
+    
+    n_term1 = ( 2.*np.exp(mu/T) + 2.*np.exp(-U/T + 2.*mu/T) ) / z0 
+
+    n_term2 = 6.*((t/T)**2.)*(-4.*np.exp(mu/T) - 4.*np.exp(-U/T + 2.*mu/T) ) * \
+                           ( 2.*T*(1-np.exp(-U/t))*np.exp(2.*mu/T) / U \
+                             + np.exp( mu/T ) + np.exp( -U/T + 3.*mu/T)) \
+                      / z0**3.
+
+    n_term3 = 6.*((t/T)**2.)*(4.*T*(1-np.exp(-U/T))*np.exp(2.*mu/T)/U \
+                              + np.exp(mu/T) + 3.*np.exp( -U/T + 3.*mu/T) ) \
+                      / z0**2.
+        
+    n = n_term1 + n_term2 + n_term3
+
+    return 1. /  (n**2.)   * dn_dmu  * t
    
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ from scipy.spatial import Delaunay
 from scipy.interpolate import CloughTocher2DInterpolator, LinearNDInterpolator
 from scipy.interpolate.interpnd import _ndim_coords_from_arrays
 
-
+from qmc import get_qty_mu
 
 def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
     """
@@ -81,54 +81,45 @@ def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
     MUCOL = 0 
     basedat = [] 
 
-    qtyinterp = kwargs.get( 'qtyinterp', 'nearest' ) 
+    qtyinterp = kwargs.get( 'qtyinterp', 'nearest' )
 
     for f in datfiles:
+        msg = 'U={:0.2f}, T={:0.2f}'.format(U,T) + \
+           ' mu={:0.2f}, Upt={:0.3f}, Tpt={:0.3f}'.\
+           format(mu, f[1], f[2])
+
         try:
             dat = np.loadtxt(f[0])
-            if qtyinterp == 'nearest': 
-                index = np.argmin( np.abs(dat[:, MUCOL] - mu )) 
-                basedat.append( [f[1], f[2], dat[index, COL]] )
-            else:
-                # find the two closest chemical potentials that 
-                # stride the point  
-                mudat = dat[:,MUCOL] 
-
-                # since the mu's are ordered we can do:
-                index0 = np.where( mudat <=mu )[0][-1]     
-                index1 = np.where( mudat > mu )[0][0] 
-               
-                qty0 = dat[ index0, COL ] 
-                qty1 = dat[ index1, COL ] 
-   
-                mu0 = dat[ index0, MUCOL ] 
-                mu1 = dat[ index1, MUCOL ]
-
-                qtyresult =  qty0 +  (mu-mu0) * (qty1-qty0) / (mu1-mu0) 
-                basedat.append( [f[1], f[2], qtyresult] )
-
-                # not implemented yet: 
-                #if showqtyinterp: 
-                #    fig = plt.figure( figsize=(3.5,3.5))
-                #    gs = matplotlib.gridspec.GridSpec( 1,1 ,\
-                #            left=0.15, right=0.96, bottom=0.12, top=0.88)
-                #    ax = fig.add_subplot( gs[0] )
-                #    ax.grid(alpha=0.5)
-
-                #print
-                #print " mu = ", mu 
-                #print "index0 = ", index0
-                #print "index1 = ", index1
-                #print "Doing linear interpolation for the qty"
-                #print " mu0 = ", mu0 
-                #print " mu1 = ", mu1 
-                #print "qty0 = ", qty0 
-                #print "qty1 = ", qty1
-                #print "qtyresult = ", qtyresult
-
+            # careful = False, for NLCE data it is ok to not worry about
+            # chemical potentials that are outside the data range
+            qtyresult = get_qty_mu( dat, mu, MUCOL, COL, msg=msg, careful=False) 
+            if qtyresult == 'out-of-bounds':
+                print msg
+                print "out-of-bounds"
+                continue
+ 
+            basedat.append( [f[1], f[2], qtyresult] )
                 
         except Exception as e:
             print "Failed to get data from file = ", f
+
+            print msg
+
+            fig = plt.figure( figsize=(3.5,3.5))
+            gs = matplotlib.gridspec.GridSpec( 1,1 ,\
+                    left=0.15, right=0.96, bottom=0.12, top=0.88)
+            ax = fig.add_subplot( gs[0] )
+            ax.grid(alpha=0.5)
+            ax.plot( dat[:,MUCOL], dat[:,COL], '.-')
+            ax.axvline( mu )
+
+            ax.text( 0.5, 1.05, msg, ha='center', va='bottom', \
+                transform=ax.transAxes)
+            if matplotlib.get_backend() == 'agg':
+                fig.savefig('err_mu.png', dpi=200) 
+            else:
+                plt.show()
+
             raise e 
         
     basedat =   np.array(basedat)
@@ -178,7 +169,11 @@ def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
         if save_err is not None:
             print "Saving png." 
             fig.savefig( save_err, dpi=300)
-        plt.show()
+
+        if matplotlib.get_backend() == 'agg':
+            fig.savefig('err.png', dpi=200) 
+        else:
+            plt.show()
     
     return result
 
