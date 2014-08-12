@@ -1,4 +1,4 @@
-
+import sys
 import numpy as np
 import matplotlib 
 
@@ -75,7 +75,9 @@ def dmu_dr( rpoints, **kwargs ):
 
     Tlist = kwargs.pop('Tlist', [0.036])
     outdict = {} 
-    for Tval in Tlist:
+    for TT, Tval in enumerate(Tlist):
+        print TT,
+        sys.stdout.flush()
         logger.warning('working on Tval = {:0.4f}'.format(Tval) )
         if Natoms is None:
             lda0 = lda.lda(potential = pot, Temperature=Tval, a_s=aS, \

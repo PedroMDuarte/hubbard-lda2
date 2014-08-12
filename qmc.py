@@ -98,7 +98,9 @@ def get_qty_mu( dat, mu, MUCOL, COL, **kwargs ):
                if verbose:
                    print "QTY=", COL,
                    print "====>>> mu={:0.2f} ".format(mu), msg 
-               if CAREFUL:
+               if  dat[:,DENSCOL].max() > 1.9 : 
+                   qtyresult = default_plus
+               elif CAREFUL:
                    return 'out-of-bounds'
                #print "====>>> BE CAREFUL :  Using default density" + \
                #      " n=%.2f"%default_plus  + \
