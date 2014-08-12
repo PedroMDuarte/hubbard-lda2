@@ -197,10 +197,10 @@ def spi_bulk( r111, n111, mu111, T, t111, U111, **kwargs ):
             entropy[ i ] =  result 
 
             if r111[i] > 20. and mu < 0. and result > 0.3:
-                print '==== ALERT HIGH ENTROPY ====' 
-                print 'r={:.1f}, U={:0.2f}, T={:0.3f}, mu={:0.3f}'.\
-                      format(r111[i],Uval, Tval, mu),
-                print '  ==> s={:0.2f}'.format( float(result ) )
+                logger.info( '==== ALERT HIGH ENTROPY ====' )
+                logger.info( 'r={:.1f}, U={:0.2f}, T={:0.3f}, mu={:0.3f}'.\
+                      format(r111[i],Uval, Tval, mu) + \
+                         '  ==> s={:0.2f}'.format( float(result ) ) )
 
             if result is not np.nan and entfail == True:
                 entfail = False

@@ -16,6 +16,9 @@ rc('text', usetex=True)
 import glob 
 import os 
 
+import ldaconf
+basedir = ldaconf.basedir
+
 from scipy.spatial import Delaunay
 from scipy.interpolate import CloughTocher2DInterpolator, LinearNDInterpolator
 from scipy.interpolate.interpnd import _ndim_coords_from_arrays
@@ -24,7 +27,7 @@ import logging
 # create logger 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler()) 
-logger.disabled = True
+#logger.disabled = True
 
 def get_qty_mu( dat, mu, MUCOL, COL, **kwargs ):
     # Control the interpolation between availble
@@ -76,8 +79,10 @@ def get_qty_mu( dat, mu, MUCOL, COL, **kwargs ):
             if COL == DENSCOL or COL == ENTRCOL:
                if verbose:
                    print "QTY=", COL,
-                   print "===>>> mu={:0.2f} ".format(mu), msg 
-               if CAREFUL:
+                   print "===>>> mu={:0.2f} ".format(mu), msg
+               if  dat[:,DENSCOL].min() < 0.1 : 
+                   qtyresult = default_minus 
+               elif CAREFUL:
                    return 'out-of-bounds'
                #print "====>>> BE CAREFUL :  Using default density" + \
                #      " n=%.2f"%default_minus  + \
@@ -148,17 +153,14 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
     # spi and entropy
     QTY = kwargs.get('QTY', 'spi' ) 
     
-    #datadir = '/home/pmd/sandbox/hubbard-lda/QMC_Final/'
-    #datadir = '/home/pmd/sandbox/hubbard-lda/COMBINED_Final/'
-
     if QTY == 'spi':
-        datadir = '/home/pmd/sandbox/hubbard-lda2/COMB_Final_Spi/'
+        datadir = basedir + 'COMB_Final_Spi/'
     elif QTY == 'entropy':
-        datadir = '/home/pmd/sandbox/hubbard-lda2/COMB_Final_Entr/'
+        datadir = basedir + 'COMB_Final_Entr/'
     elif QTY == 'density':
-        datadir = '/home/pmd/sandbox/hubbard-lda2/COMB_Final_Spi/'
+        datadir = basedir + 'COMB_Final_Spi/'
     elif QTY == 'kappa':
-        datadir = '/home/pmd/sandbox/hubbard-lda2/COMB_Final_Spi/'
+        datadir = basedir + 'COMB_Final_Spi/'
     else:
         raise ValueError('Quantity not defined:' + str(QTY) ) 
          
@@ -214,7 +216,6 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
             #print "Ts =", Ts
             #print "will add nearest Ts nevertheless"
             Tpts = [  ] 
-              
             #raise ValueError("QMC data not available.")
 
 
@@ -279,6 +280,7 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
     logger.debug("number of nearby points  = " +  str(len(datfiles))) 
     basedat = []
     basedaterr = []
+    datserr = [] 
     for mm, f in enumerate(datfiles):
         # f[0] is the datafile name
         # f[1] is U
@@ -296,8 +298,9 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
             # Toggle the false here to plot all of the out of bounds
             if spival == 'out-of-bounds':
                 #spival_symmetry = 
-                logger.warning('qty is out of bounds')
+                logger.info('qty is out of bounds')
                 basedaterr.append( [f[1], f[2], np.nan] )
+                datserr.append( dat ) 
 
                 if False:
                     fig = plt.figure( figsize=(3.5,3.5))
@@ -341,33 +344,58 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
  
         
     error = False
-    try: 
-        basedat =   np.array(basedat)
+    points = None
 
-        Us = np.unique(basedat[:,0] )
-        Ts = np.unique(basedat[:,1] ) 
-        validTriang = not ( len(Us) ==1  or len(Ts) ==  1 ) 
-        #print "#Us={:d}, #Ts={:d}".format( len(Us), len(Ts) )  
-        #print msg 
+    # MAKE THE TRIANGULATION 
+    basedat =   np.array(basedat)
 
-        if validTriang: 
-            points = _ndim_coords_from_arrays(( basedat[:,0] , basedat[:,1]))
-            #print "Closest dat = ", basedat
-            #finterp = CloughTocher2DInterpolator(points, basedat[:,2])
-            finterp = LinearNDInterpolator( points, basedat[:,2] )
-        else:
-            logerr = 'not enough finterp points' 
-            logger.exception(logerr)
-            raise ValueError( logerr )
+    Us = np.unique(basedat[:,0] )
+    Ts = np.unique(basedat[:,1] )
 
+    validTriang = not ( len(Us) ==1  or len(Ts) ==  1 ) 
+    #print "#Us={:d}, #Ts={:d}".format( len(Us), len(Ts) )  
+    #print msg 
 
-    except Exception as e :
-        
-        logerr =  "QTY=%s -> Interp Error:"%QTY + '\n' +  msg + \
-                  "number of basedat pts = " + str(len(basedat)) 
-        error = True 
+    if validTriang: 
+        points = _ndim_coords_from_arrays(( basedat[:,0] , basedat[:,1]))
+        #print "Closest dat = ", basedat
+        #finterp = CloughTocher2DInterpolator(points, basedat[:,2])
+        finterp = LinearNDInterpolator( points, basedat[:,2] )
+    else:
+       
+        logerr = 'not enough finterp points, QTY=%s'%QTY + '\n' + msg + '\n' \
+                  + "number of basedat pts = " + str(len(basedat))
+        print basedat
+        print "len Us = ", len(Us)
+        print "len Ts = ", len(Ts)
+        print "len 'out-of-bounds' = ", len( basedaterr )
+        if len( basedaterr ) > 0:
+            for bb, bdaterr in enumerate(basedaterr):
+                msgbb = 'U={:0.2f}, T={:0.2f}'.format(U,T) +\
+                   ' mu={:0.2f}, r={:0.2f}, Upt={:0.3f}, Tpt={:0.3f}'.\
+               format(mu, radius, basedaterr[bb][0], basedaterr[bb][1] )
+                daterr = datserr[bb]
+                fig = plt.figure( figsize=(3.5,3.5))
+                gs = matplotlib.gridspec.GridSpec( 1,1 ,\
+                        left=0.15, right=0.96, bottom=0.12, top=0.88)
+                ax = fig.add_subplot( gs[0] )
+                ax.grid(alpha=0.5) 
+                ax.plot( daterr[:,MUCOL], daterr[:,COL], '.-') 
+                ax.axvline( mu )
+                ax.text( 0.5, 1.05, msgbb, ha='center', va='bottom', \
+                    transform=ax.transAxes, fontsize=6.) 
+                if matplotlib.get_backend() == 'agg':
+                    fig.savefig('err_mu_%02d.png'%bb, dpi=200)
+                    plt.close(fig)
+                else:         
+                    plt.show()
+                    plt.close(fig)
         logger.exception(logerr)
-        #raise e  
+        raise ValueError('finterp')
+
+
+    if points == None:
+        logger.warning( "points object is None"  )  
 
     if error == False:
         try:

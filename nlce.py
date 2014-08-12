@@ -3,8 +3,9 @@
 This file provides a way to obtain thermodynamic quantities from an 
 interpolation of available NLCE solutions 
 """
-
+import ldaconf
 import numpy as np
+import glob
 
 import matplotlib.pyplot as plt
 import matplotlib
@@ -36,8 +37,13 @@ def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
     
     
     # The T points are not uniformly spaced so we find the two closest ones
-    Ts = np.array([0.4, 0.5, 0.64, 0.72, 0.84, 0.9, 1.0, 1.2, \
-                   1.4, 1.6, 1.8, 2.0, 2.2, 2.4])
+
+    # We start with a list of available T points: 
+    #Ts = np.array([0.4, 0.5, 0.64, 0.72, 0.84, 0.9, 1.0, 1.2, \
+    #               1.4, 1.6, 1.8, 2.0, 2.2, 2.4])
+    Ts = np.array( sorted( [ float(g.split('/T')[1].split('.dat')[0]) for g in \
+             glob.glob(ldaconf.basedir + 'NLCE8_FinalK/U00/T*') ] ) )
+    
     
     diff = T-Ts
 
@@ -59,7 +65,7 @@ def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
         #Tb = max(Ts[order[0]], Ts[order[1]])
         #print "T in ", Ta, Tb
     
-    datadir = '/home/pmd/sandbox/hubbard-lda2/'
+    datadir = ldaconf.basedir
     datfiles = []
     for Uval in [Ua,Ub]:
         for Tval in Tpts:

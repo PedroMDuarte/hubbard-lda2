@@ -7,6 +7,11 @@ import lda
 
 from scipy.interpolate import interp1d
 
+import logging
+# create logger 
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler()) 
+#logger.disabled = True
 
 def deriv( x, f ):
     """ 
@@ -70,7 +75,8 @@ def dmu_dr( rpoints, **kwargs ):
 
     Tlist = kwargs.pop('Tlist', [0.036])
     outdict = {} 
-    for Tval in Tlist: 
+    for Tval in Tlist:
+        logger.warning('working on Tval = {:0.4f}'.format(Tval) )
         if Natoms is None:
             lda0 = lda.lda(potential = pot, Temperature=Tval, a_s=aS, \
                            override_npoints = 240,\
@@ -99,7 +105,6 @@ def dmu_dr( rpoints, **kwargs ):
         dmu_dr111 = deriv( r111, localMu_t_f ) 
     
         t0 = lda0.tunneling_111.min()
-        print t0 
         # Need to also get the value of T/t0 and the overall S/N 
         _spibulk, _spi, _r111, _n111, _U111, _t111, _entrbulk, _entr111,\
         _lda_num, _density111, _k111, _k111htse_list = \

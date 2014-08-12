@@ -23,8 +23,9 @@ import udipole
 import scipy.constants as C 
 
 
+import ldaconf
 # Load the interpolation data for band structure
-basedir = '/home/pmd/sandbox/hubbard-lda2/'
+basedir = ldaconf.basedir
  
 v0 = np.loadtxt(basedir + 'banddat/interpdat_B1D_v0.dat')
 NBands = 3
