@@ -23,24 +23,19 @@ def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
     """
     This function finds the closest values of U and T in the NLCE data 
     that straddle the values U and T given as arguments.
-    
-    This case is a little bit easier than the QMC data because here 
-    pretty much everything is available, so we can directly get the 
-    closest four (U,T) points to get the triangulation 
     """
-    
-    Ustep = 2. 
-    Ua = Ustep*(U/Ustep - (U%Ustep)/Ustep)
-    Ub = Ua + 2. 
-    
-    #print "U in ", Ua, Ub
-    
+   
+    nUs = 3 
+    us = [ float(u.split('/U')[-1]) for u in \
+             glob.glob( ldaconf.basedir + 'NLCE8_FinalK/U*' ) ] 
+    du = [ np.abs( U-u ) for u in us ] 
+    index = np.argsort( du ) 
+    Ulist0 = range( nUs ) 
+    Upts = [ us[index[i]] for i in Ulist0 ]  
+ 
     
     # The T points are not uniformly spaced so we find the two closest ones
-
     # We start with a list of available T points: 
-    #Ts = np.array([0.4, 0.5, 0.64, 0.72, 0.84, 0.9, 1.0, 1.2, \
-    #               1.4, 1.6, 1.8, 2.0, 2.2, 2.4])
     Ts = np.array( sorted( [ float(g.split('/T')[1].split('.dat')[0]) for g in \
              glob.glob(ldaconf.basedir + 'NLCE8_FinalK/U00/T*') ] ) )
     
@@ -67,7 +62,7 @@ def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
     
     datadir = ldaconf.basedir
     datfiles = []
-    for Uval in [Ua,Ub]:
+    for Uval in Upts:
         for Tval in Tpts:
             fname =  datadir + \
                 'NLCE8_FinalK/U{:02d}/T{:0.2f}.dat'.format(int(Uval),Tval)
