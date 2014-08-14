@@ -403,7 +403,13 @@ def find_closest_qmc( U=8, T=0.67, mu=4.0, **kwargs):
         try:
             result = finterp( U,T )
             if np.isnan(result):
-                raise Exception("\n!!!! Invalid result, QTY:%s!!!!\n"%QTY)
+                if U >= 30.0 and U <=32.5:
+                    result = finterp( 29.99, T ) 
+                    logger.warning(" qmc: U={:0.1f} replaced to U=29.99 ".\
+                                     format(U) )
+            if np.isnan(result):
+                raise Exception("\n!!!! qmc: Invalid result, QTY:%s!!!!\n"%QTY \
+                        + msg0)
         except Exception as e:
             if kwargs.get('error_nan', False):
                 return np.nan 

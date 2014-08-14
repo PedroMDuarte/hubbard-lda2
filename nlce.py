@@ -17,6 +17,12 @@ from scipy.spatial import Delaunay
 from scipy.interpolate import CloughTocher2DInterpolator, LinearNDInterpolator
 from scipy.interpolate.interpnd import _ndim_coords_from_arrays
 
+import logging
+# create logger
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+#logger.disabled = True
+
 from qmc import get_qty_mu
 
 def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
@@ -24,6 +30,8 @@ def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
     This function finds the closest values of U and T in the NLCE data 
     that straddle the values U and T given as arguments.
     """
+
+    msg0 = "U={:0.2f}, T={:0.2f}".format( U, T) 
    
     nUs = 3 
     us = [ float(u.split('/U')[-1]) for u in \
@@ -136,7 +144,12 @@ def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
     try:
         result = finterp( U,T )
         if np.isnan(result):
-            raise Exception("!!!! Invalid result !!!!\n")
+            if U >= 30 and U<=32.5:
+                result = finterp( 29.99, T ) 
+                logger.warning(" nlce: U={:0.1f} replaced to U=29.99 ".format(U) )
+        if np.isnan(result):
+            raise Exception("!!!! nlce: Invalid result !!!!\n" + msg0)
+        
     except Exception as e:
         print e
         error = True
@@ -168,13 +181,16 @@ def find_closest_nlce( U=8, T=0.67, mu=4., qty='dens', **kwargs):
                 ha='center', va='bottom', fontsize=10)
         save_err = kwargs.get('save_err',None) 
         if save_err is not None:
-            print "Saving png." 
+            print "saving png to ", save_err 
             fig.savefig( save_err, dpi=300)
 
         if matplotlib.get_backend() == 'agg':
+            print "saving png to err.png"
             fig.savefig('err.png', dpi=200) 
         else:
             plt.show()
+
+        raise
     
     return result
 

@@ -111,7 +111,7 @@ def dmu_dr( rpoints, **kwargs ):
         _spibulk, _spi, _r111, _n111, _U111, _t111, _entrbulk, _entr111,\
         _lda_num, _density111, _k111, _k111htse_list = \
             lda0.getBulkSpi(Tspi=Tval/t0, inhomog=True, \
-               spiextents=extents, entextents=extents, do_k111=True) 
+               spiextents=extents, entextents=extents, do_k111=False) 
     
         Tdict = {
                    'r111':r111 ,\
